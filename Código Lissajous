@@ -1,0 +1,222 @@
+#Simulación de las curvas combinadas cerradas bidimensionales
+
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import warnings
+warnings.filterwarnings('ignore')
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = 'white'
+
+#Introducción de los parámetros del sistema
+
+N = 4   #Número de agentes
+
+K_GAINS = np.array([1.0, 1.0])   #Constantes de ponderación
+KC = 1.0   #Factor de coordinación
+T_END, DT_SAVE = 20.0, 0.05   #Parámetros temporales 
+#  **Para comprobar la densidad en el rectángulo aumentar el T_END a 400s**
+
+#Parámetros de las funciones con relación irracional
+
+ALPHA = np.sqrt(2)   
+BETA  = 1.0          
+
+#Diferencia parámetrica para agentes consecutivos en la configuración de referencia
+
+DELTA = np.pi / 10    
+
+COLORS = ['#E63946', '#2A9D8F', '#E9C46A', '#A663CC']
+LABELS = [f'Agente {i+1}' for i in range(N)]
+
+#Función que describe la trayectoria deseada
+
+def f(w):
+    return np.array([
+        2.0 * np.sin(ALPHA * w),
+        np.sin(BETA  * w)
+    ])
+
+#Cálculo de su derivada mediante aproximación mumérica
+
+def df(w):
+    return np.array([
+        2.0 * ALPHA * np.cos(ALPHA * w),
+        BETA        * np.cos(BETA  * w)
+    ])
+
+#Establecer los vecinos de cada agente en formato diccionario
+
+NEIGHBORS = {}
+for i in range(N):
+    nbrs = []
+    if i > 0:
+        nbrs.append(i - 1)      
+    if i < N - 1:
+        nbrs.append(i + 1)      
+    NEIGHBORS[i] = nbrs
+
+#Establecer la configuración de referencia
+
+W_STAR = np.array([i * DELTA for i in range(N)])
+
+#Definir el campo vectorial del sistema que da lugar al sistema a integrar
+
+def ode_rhs(t, state):
+    dstate = np.zeros_like(state)
+    w_all  = state[2::3]
+    for i in range(N):   #Iteración para crear el campo de cada agente i uno a uno
+        idx = i * 3
+        xi  = state[idx:idx+2]
+        wi  = state[idx+2]
+        fi  = f(wi)
+        dfi = df(wi)
+        phi_err = xi - fi   #Cálculo del error de seguimiento                         
+        dx = dfi - K_GAINS * phi_err   #Campo de guiado para las coordenadas espaciales        
+        dw = 1.0 + np.dot(K_GAINS * phi_err, dfi)   #Campo de guiado para la coordenada virtual
+        ci = 0.0
+        for j in NEIGHBORS[i]:   #Iterar sobre los vecinos de cada agente i
+            delta_ij = W_STAR[i] - W_STAR[j]     #Diferencia paramétrica deseada
+            ci -= (w_all[i] - w_all[j] - delta_ij)   #Campo de coordinación
+        dstate[idx:idx+3] = np.concatenate([dx, [dw + KC * ci]])   #Campo total
+    return dstate
+
+#Definir y establecer aspectos y características de las gráficas
+
+def style_ax(ax, title, xlabel, ylabel):
+    ax.set_facecolor('white')
+    ax.set_title(title, color='black', fontsize=14, pad=12)
+    ax.set_xlabel(xlabel, color='black', fontsize=12)
+    ax.set_ylabel(ylabel, color='black', fontsize=12)
+    ax.tick_params(colors='black', labelsize=8)
+    for spine in ax.spines.values():
+        spine.set_color('black')
+    ax.grid(True, color='lightgray', linewidth=0.5)
+    return ax
+
+ani = None
+
+#Función para crear animación y gráficas
+
+def plot_results(sol, pf_errors, coord_errors, pairs):
+    global ani
+
+    X_LIM = (-4, 4)
+    Y_LIM = (-3, 3)
+
+    #Animación
+
+    fig_anim, ax_anim = plt.subplots(figsize=(7, 5), facecolor='white')
+    style_ax(ax_anim,
+             'Animación – Curva de Lissajous abierta (cadena lineal)',
+             'x₁ (m)', 'x₂ (m)')
+    ax_anim.set_aspect('equal')
+
+    trails = [ax_anim.plot([], [], '-',
+                           color=COLORS[i % len(COLORS)], lw=1.5, alpha=0.7)[0]
+              for i in range(N)]
+    heads  = [ax_anim.plot([], [], 'o',
+                           color=COLORS[i % len(COLORS)], ms=6, mec='black',
+                           label=LABELS[i])[0]
+              for i in range(N)]
+    ax_anim.set_xlim(*X_LIM)
+    ax_anim.set_ylim(*Y_LIM)
+    ax_anim.legend(loc='upper right', fontsize=8)
+
+    def update(frame):
+        for i in range(N):
+            x_hist = sol.y[i*3,     :frame+1]
+            y_hist = sol.y[i*3 + 1, :frame+1]
+            trails[i].set_data(x_hist, y_hist)
+            heads[i].set_data([x_hist[-1]], [y_hist[-1]])
+        return trails + heads
+
+    ani = animation.FuncAnimation(
+        fig_anim, update, frames=len(sol.t), interval=15, blit=True)
+
+    #Gráfica del error de seguimiento
+    
+    fig2, ax_pf = plt.subplots(figsize=(7, 4), facecolor='white')
+    style_ax(ax_pf,
+             'Error de seguimiento',
+             'Tiempo (s)', r'Error $\|\Phi_i(\xi_i)\|$ (m)')
+    for i in range(N):
+        ax_pf.plot(sol.t, pf_errors[i],
+                   color=COLORS[i % len(COLORS)], label=LABELS[i])
+    ax_pf.legend(fontsize=8)
+
+     #Gráfica del estado final
+
+    fig3, ax_final = plt.subplots(figsize=(8, 5), facecolor='white')
+    style_ax(ax_final, 'Estado final del sistema (t=20s)',
+             'x₁ (m)', 'x₂ (m)')
+    ax_final.set_aspect('equal')
+    for i in range(N):
+        ax_final.plot(sol.y[i*3, :], sol.y[i*3+1, :],
+                      color=COLORS[i % len(COLORS)], lw=1, alpha=0.6)
+        xf, yf = sol.y[i*3, -1], sol.y[i*3+1, -1]
+        ax_final.plot(xf, yf, 'o',
+                      color=COLORS[i % len(COLORS)], ms=8, mec='black',
+                      label=LABELS[i])
+    ax_final.set_xlim(*X_LIM)
+    ax_final.set_ylim(*Y_LIM)
+    ax_final.legend(fontsize=8)
+
+    #Gráfica del error de coordinación
+
+    fig4, ax_co = plt.subplots(figsize=(7, 4), facecolor='white')
+    style_ax(ax_co,
+             'Error de coordinación',
+             'Tiempo (s)',
+             'Error angular (rad)')
+    for idx, (i, j) in enumerate(pairs):
+        ax_co.plot(sol.t, coord_errors[idx],
+                   label=f'Agente {i+1}-Agente {j+1}', lw=1.2)
+    ax_co.axhline(0, color='black', ls='--', alpha=0.3)
+    ax_co.legend(fontsize=8)
+
+    plt.tight_layout()
+    plt.show()
+
+#Resolución numérica del sistema mediante Runge-Kutta y otros cálculos intermedios
+
+if __name__ == "__main__":
+    print(f"Simulación: N={N} agentes, curva abierta, cadena lineal")
+    print(f"  Δ_ij = π/6 ≈ {DELTA:.4f} rad  (diferencia paramétrica fija)")
+    print(f"  Agentes sin comunicar: 0 ↔ {N-1}  (extremos de la cadena)\n")
+
+    rng = np.random.default_rng(7)
+    s0  = np.zeros(N * 3)
+    for i in range(N):
+        s0[i*3:i*3+2] = rng.uniform([-4, -3], [4, 3])  #Establecimiento aleatorio de las coordenadas espaciales iniciales
+        s0[i*3+2]     = W_STAR[i]                
+
+    t_eval = np.arange(0.0, T_END + DT_SAVE, DT_SAVE)   #Tiempos de evaluación intermedia del sistema
+
+    sol = solve_ivp(
+        ode_rhs, (0.0, T_END), s0,
+        t_eval=t_eval, method='RK45',
+        rtol=1e-6, atol=1e-8)   #Resolución mediante Runge-Kutta
+
+    #Cálculos intermedios del error de seguimiento
+    
+    nt     = len(sol.t)
+    pf_err = np.zeros((N, nt))
+    for k in range(nt):
+        for i in range(N):
+            pf_err[i, k] = np.linalg.norm(
+                sol.y[i*3:i*3+2, k] - f(sol.y[i*3+2, k]))
+
+    #Cálculos intermedios del error de coordinación
+    
+    pairs  = [(i, i+1) for i in range(N-1)]   # cadena: (0,1),(1,2),(2,3)
+    co_err = np.zeros((len(pairs), nt))
+    for k in range(nt):
+        w_all = sol.y[2::3, k]
+        for idx, (i, j) in enumerate(pairs):
+            delta_ij      = W_STAR[i] - W_STAR[j]
+            co_err[idx, k] = w_all[i] - w_all[j] - delta_ij
+
+
+    plot_results(sol, pf_err, co_err, pairs)
