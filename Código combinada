@@ -1,0 +1,227 @@
+#Simulación de las curvas combinadas cerradas bidimensionales
+
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import warnings
+warnings.filterwarnings('ignore')
+plt.rcParams['figure.facecolor'] = 'white'
+plt.rcParams['axes.facecolor'] = 'white'
+
+#Introducción de los parámetros del sistema
+
+N   = 21  #Número de agentes
+T   = 2 * np.pi  #Periodo
+
+K_GAINS = np.array([1.0, 1.0])    #Constantes de ponderación
+KC      = 8.0  #Factor de coordinación
+
+T_END, DT_SAVE = 20.0, 0.05   #Parámetros temporales
+
+#Configuración de los distintos grupos de agentes
+
+GROUP_A = list(range(0,  7))
+GROUP_B = list(range(7,  14))
+GROUP_C = list(range(14, 21))
+
+COLORS = (
+    ['#E63946'] * 7 +
+    ['#2A9D8F'] * 7 +
+    ['#E9C46A'] * 7
+)
+
+LABELS = (
+    [f'Agente {i+1}' for i in range(7)] +
+    [f'Agente {i+8}' for i in range(7)] +
+    [f'Agente {i+15}' for i in range(7)]
+)
+
+#Funciones que describen las trayectorias deseadas
+
+def f_agent(i, w):
+    if i in GROUP_A:
+        return np.array([5 * np.cos(w), 2.5 * np.sin(w)])
+    elif i in GROUP_B:
+        return np.array([5 * np.cos(w), 5 * np.sin(w)])
+    else:
+        return np.array([10 * np.cos(w), 5 * np.sin(w)])
+
+#Cálculo de sus derivadas mediante aproximación mumérica
+
+def df_agent(i, w):
+    eps = 1e-6
+    return (f_agent(i, w + eps) - f_agent(i, w - eps)) / (2 * eps)
+
+#Establecer los vecinos de cada agente en formato diccionario
+
+NEIGHBORS = {i: [(i - 1) % N, (i + 1) % N] for i in range(N)}
+
+#Establecer la configuración de referencia
+
+W_STAR = np.array([i * T / N for i in range(N)])
+
+#Definir el campo vectorial del sistema que da lugar al sistema a integrar
+
+def ode_rhs(t, state):
+    dstate = np.zeros_like(state)
+    w_all  = state[2::3]
+
+    for i in range(N):  #Iteración para crear el campo de cada agente i uno a uno
+        idx = i * 3
+        xi  = state[idx:idx+2]
+        wi  = state[idx+2]
+        fi  = f_agent(i, wi)
+        dfi = df_agent(i, wi)
+        phi_err = xi - fi    #Cálculo del error de seguimiento
+        dx      = dfi - K_GAINS * phi_err   #Campo de guiado para las coordenadas espaciales
+        dw      = 1.0 + np.dot(K_GAINS * phi_err, dfi)   #Campo de guiado para la coordenada virtual
+        ci = 0.0
+        for j in NEIGHBORS[i]:  #Iterar sobre los vecinos de cada agente i
+            ci -= (w_all[i] - w_all[j] - (W_STAR[i] - W_STAR[j]))   #Campo de coordinación
+        dstate[idx:idx+3] = np.concatenate([dx, [dw + KC * ci]])   #Campo total
+
+    return dstate
+
+#Definir y establecer aspectos y características de las gráficas
+
+def style_ax(ax, title, xlabel, ylabel):
+    ax.set_facecolor('white')
+    ax.set_title(title, color='black', fontsize=14, pad=10)
+    ax.set_xlabel(xlabel, color='black', fontsize=12)
+    ax.set_ylabel(ylabel, color='black', fontsize=12)
+    ax.tick_params(colors='black', labelsize=8)
+    for spine in ax.spines.values():
+        spine.set_color('black')
+    ax.grid(True, color='lightgray', linewidth=0.5)
+    return ax
+
+ani = None
+
+#Función para crear animación y gráficas
+
+def plot_results(sol, pf_errors, coord_errors, pairs):
+    global ani
+    w_ref = np.linspace(0, 2 * np.pi, 600)
+
+    #Animación
+
+    fig_anim, ax_anim = plt.subplots(figsize=(7, 7), facecolor='white')
+    style_ax(ax_anim, 'Tercera simulación – Trayectorias (N=21)', 'x (m)', 'y (m)')
+    ax_anim.set_aspect('equal')
+
+    ax_anim.plot(5*np.cos(w_ref), 2.5*np.sin(w_ref), '--', color='#E63946', alpha=0.3, lw=1.2)
+    ax_anim.plot(5*np.cos(w_ref), 5*np.sin(w_ref), '--', color='#2A9D8F', alpha=0.3, lw=1.2)
+    ax_anim.plot(10*np.cos(w_ref), 5*np.sin(w_ref), '--', color='#E9C46A', alpha=0.3, lw=1.2)
+
+    max_val = 12
+    ax_anim.set_xlim(-max_val, max_val)
+    ax_anim.set_ylim(-max_val, max_val)
+
+    trails = [ax_anim.plot([], [], '-', color=COLORS[i], lw=1.2, alpha=0.5)[0] for i in range(N)]
+    heads  = [ax_anim.plot([], [], 'o', color=COLORS[i], ms=6, mec='black')[0] for i in range(N)]
+    ax_anim.legend(fontsize=7)
+
+    def update(frame):
+        for i in range(N):
+            trails[i].set_data(sol.y[i*3, :frame+1],
+                               sol.y[i*3+1, :frame+1])
+            heads[i].set_data([sol.y[i*3, frame]],
+                              [sol.y[i*3+1, frame]])
+        return trails + heads
+
+    ani = animation.FuncAnimation(fig_anim, update, frames=len(sol.t),
+                                  interval=15, blit=True)
+
+    #Gráfica del error de seguimiento
+    
+    fig2, axes2 = plt.subplots(1, 3, figsize=(14, 4), facecolor='white')
+
+    group_info = [('Grupo 1: elipse inscrita', GROUP_A),
+                  ('Grupo 2: circunferencia', GROUP_B),
+                  ('Grupo 3: elipse circunscrita', GROUP_C)]
+
+    for ax, (title, grp) in zip(axes2, group_info):
+        style_ax(ax, title, 'Tiempo (s)', r'‖$\Phi(\xi_i)$‖ (m)')
+        for i in grp:
+            ax.plot(sol.t, pf_errors[i], color=COLORS[i], label=LABELS[i], lw=0.9)
+        ax.legend(fontsize=6)
+
+    fig2.tight_layout()
+
+    #Gráfica del estado final
+    
+    fig3, ax3 = plt.subplots(figsize=(8, 8), facecolor='white')
+    style_ax(ax3, 'Estado final del sistema', 'x (m)', 'y (m)')
+    ax3.set_aspect('equal')
+
+    ax3.plot(5*np.cos(w_ref), 2.5*np.sin(w_ref), '-', color='#E63946', alpha=0.3)
+    ax3.plot(5*np.cos(w_ref), 5*np.sin(w_ref), '-', color='#2A9D8F', alpha=0.3)
+    ax3.plot(10*np.cos(w_ref), 5*np.sin(w_ref), '-', color='#E9C46A', alpha=0.3)
+
+    for i in range(N):
+        ax3.plot(sol.y[i*3, :], sol.y[i*3+1, :], color=COLORS[i], lw=0.8, alpha=0.4)
+        xf, yf = sol.y[i*3, -1], sol.y[i*3+1, -1]
+        ax3.plot(xf, yf, 'o', color=COLORS[i], ms=7, mec='black')
+
+    ax3.set_xlim(-max_val, max_val)
+    ax3.set_ylim(-max_val+5, max_val-3)
+
+    from matplotlib.lines import Line2D
+    legend_handles = [
+        Line2D([0],[0], color='#E63946', marker='o', ms=7, label='Grupo 1: elipse inscrita'),
+        Line2D([0],[0], color='#2A9D8F', marker='o', ms=7, label='Grupo 2: circunferencia'),
+        Line2D([0],[0], color='#E9C46A', marker='o', ms=7, label='Grupo 3: elipse circunscrita'),
+    ]
+    ax3.legend(handles=legend_handles, fontsize=8, loc='upper right')
+
+    #Gráfica del error de coordinación
+    
+    fig4, ax4 = plt.subplots(figsize=(9, 4), facecolor='white')
+    style_ax(ax4, 'Error de coordinación entre agentes vecinos', 'Tiempo (s)', 'Error angular (rad)')
+    cmap = plt.cm.hsv(np.linspace(0, 0.85, len(pairs)))
+
+    for idx, (i, j) in enumerate(pairs):
+        ax4.plot(sol.t, coord_errors[idx], color=cmap[idx], lw=0.8, label=f'A{i+1}-A{j+1}', alpha=0.8)
+
+    ax4.axhline(0, color='black', ls='--', alpha=0.3)
+    ax4.legend(fontsize=7, ncol=4, loc='upper right')
+
+    plt.show()
+
+#Resolución numérica del sistema mediante Runge-Kutta y otros cálculos intermedios
+
+if __name__ == "__main__":
+    rng = np.random.default_rng(42)
+    s0  = np.zeros(N * 3)
+
+    for i in range(N):
+        s0[i*3:i*3+2] = rng.uniform(-15, 15, 2)  #Establecimiento aleatorio de las coordenadas espaciales iniciales
+        s0[i*3+2]     = W_STAR[i]
+
+    t_eval = np.arange(0.0, T_END + DT_SAVE, DT_SAVE)  #Tiempos de evaluación intermedia del sistema
+
+    sol = solve_ivp(ode_rhs, (0.0, T_END), s0,
+                    t_eval=t_eval, method='RK45',
+                    rtol=1e-6, atol=1e-8)   #Resolución mediante Runge-Kutta
+
+    #Cálculos intermedios del error de seguimiento
+
+    nt = len(sol.t)
+    pf_err = np.zeros((N, nt))
+    for k in range(nt):
+        for i in range(N):
+            pf_err[i, k] = np.linalg.norm(
+                sol.y[i*3:i*3+2, k] - f_agent(i, sol.y[i*3+2, k])
+            )
+            
+    #Cálculos intermedios del error de coordinación        
+
+    pairs  = [(i, (i + 1) % N) for i in range(N)]
+    co_err = np.zeros((len(pairs), nt))
+    for k in range(nt):
+        w_all = sol.y[2::3, k]
+        for idx, (i, j) in enumerate(pairs):
+            co_err[idx, k] = w_all[i] - w_all[j] - (W_STAR[i] - W_STAR[j])
+
+    plot_results(sol, pf_err, co_err, pairs)
