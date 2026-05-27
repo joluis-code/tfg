@@ -182,10 +182,6 @@ def plot_results(sol, pf_errors, coord_errors, pairs):
 #Resolución numérica del sistema mediante Runge-Kutta y otros cálculos intermedios
 
 if __name__ == "__main__":
-    print(f"Simulación: N={N} agentes, curva abierta, cadena lineal")
-    print(f"  Δ_ij = π/6 ≈ {DELTA:.4f} rad  (diferencia paramétrica fija)")
-    print(f"  Agentes sin comunicar: 0 ↔ {N-1}  (extremos de la cadena)\n")
-
     rng = np.random.default_rng(7)
     s0  = np.zeros(N * 3)
     for i in range(N):
