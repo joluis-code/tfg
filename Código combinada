@@ -107,7 +107,7 @@ def plot_results(sol, pf_errors, coord_errors, pairs):
     #Animación
 
     fig_anim, ax_anim = plt.subplots(figsize=(7, 7), facecolor='white')
-    style_ax(ax_anim, 'Tercera simulación – Trayectorias (N=21)', 'x (m)', 'y (m)')
+    style_ax(ax_anim, 'Animación del sistema combinado', 'x (m)', 'y (m)')
     ax_anim.set_aspect('equal')
 
     ax_anim.plot(5*np.cos(w_ref), 2.5*np.sin(w_ref), '--', color='#E63946', alpha=0.3, lw=1.2)
