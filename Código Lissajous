@@ -109,7 +109,7 @@ def plot_results(sol, pf_errors, coord_errors, pairs):
 
     fig_anim, ax_anim = plt.subplots(figsize=(7, 5), facecolor='white')
     style_ax(ax_anim,
-             'Animación – Curva de Lissajous abierta (cadena lineal)',
+             'Animación – Curva de Lissajous abierta',
              'x₁ (m)', 'x₂ (m)')
     ax_anim.set_aspect('equal')
 
