@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🤖 Simulación de Sistemas Multi-Agente
+# Simulación de Sistemas Multi-Agente
 ### Material complementario — Trabajo de Fin de Grado
 
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat-square&logo=python&logoColor=white)
