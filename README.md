@@ -63,7 +63,8 @@ python Código_Lissajous.py
 python Código_infinito.py
 ```
 
-> **Nota:** En `Código_Lissajous.py`, el parámetro `T_END` puede ampliarse a `400.0` para observar cómo los agentes cubren densamente el rectángulo imagen de la curva, tal y como se describe en la memoria.
+> **Nota:** En los distintos códigos de las simulaciones se pueden alterar los valores de los distintos parámetros (número de agentes, tiempo, constantes de ponderación...) para comprobar como se comportarían los sistemas bajo condiciones distintas.
+> **Nota:** Concrétamente en `Código_Lissajous.py`, el parámetro `T_END` puede ampliarse a `400.0` o un valor similar para observar cómo los agentes cubren densamente el rectángulo imagen de la curva, tal y como se describe en la memoria.
 
 ---
 
