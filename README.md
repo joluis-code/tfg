@@ -67,6 +67,17 @@ python Código_infinito.py
 
 ---
 
+## 👤 Autor
+
+| | |
+|--|--|
+| **Nombre** | *Tu nombre* |
+| **Grado** | *Tu carrera* |
+| **Universidad** | *Tu universidad* |
+| **Año** | 2025 |
+
+---
+
 ## 📄 Licencia
 
 Repositorio publicado con fines académicos como material complementario al TFG.  
