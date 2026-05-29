@@ -1,6 +1,6 @@
 <div align="center">
 
-# Simulación de Sistemas Multi-Agente
+# Navegación coordinada en sistemas multiagente
 ### Material complementario — Trabajo de Fin de Grado
 
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat-square&logo=python&logoColor=white)
@@ -13,7 +13,7 @@
 
 ---
 
-Este repositorio contiene el código Python y las animaciones generadas como material complementario al Trabajo de Fin de Grado. Incluye cuatro simulaciones independientes de sistemas multi-agente que siguen distintas trayectorias en 2D y 3D, partiendo de posiciones iniciales aleatorias y convergiendo hacia una formación coordinada sobre la curva objetivo.
+Este repositorio contiene el código Python y las animaciones generadas como material complementario a la memoria del TFG. Incluye las simulaciones de cuatro sistemas multiagente independientes que siguen distintas trayectorias en 2D y 3D, partiendo de posiciones iniciales aleatorias y convergiendo hacia una formación coordinada sobre la curva o curvas objetivo.
 
 Cada simulación genera automáticamente cuatro salidas gráficas: una animación de la evolución del sistema, la gráfica del error de seguimiento de cada agente, el estado final con las trayectorias recorridas y el error de coordinación entre agentes vecinos a lo largo del tiempo.
 
@@ -26,9 +26,9 @@ Cada simulación genera automáticamente cuatro salidas gráficas: una animació
 | Archivo | Agentes | Dimensión | Curva objetivo |
 |---------|:-------:|:---------:|----------------|
 | `Código_elipse.py` | 5 | 2D | Elipse |
-| `Código_combinada.py` | 21 | 2D | Tres elipses (tres grupos) |
+| `Código_combinada.py` | 21 | 2D | Dos circunferencias (inscrita y circunscrita) y una elipse |
 | `Código_Lissajous.py` | 4 | 2D | Curva de Lissajous abierta |
-| `Código_infinito.py` | 15 | 3D | Curva cerrada tipo lemniscata |
+| `Código_infinito.py` | 15 | 3D | Curva cerrada con forma de infinito |
 
 ### 🎞️ Animaciones
 
@@ -38,7 +38,7 @@ Cada simulación genera automáticamente cuatro salidas gráficas: una animació
 | `Combinadasimulación.gif` | Curvas combinadas 2D |
 | `Lissajoussimulación.gif` | Lissajous — simulación corta |
 | `Lissajoussimulaciónlarga.gif` | Lissajous — simulación larga (T = 400 s) |
-| `Infinitosimulación.gif` | Lemniscata 3D |
+| `Infinitosimulación.gif` | Infinito 3D |
 
 ---
 
@@ -67,18 +67,18 @@ python Código_infinito.py
 
 ---
 
-## 👤 Autor
+## Autor
 
 | | |
 |--|--|
-| **Nombre** | *Tu nombre* |
-| **Grado** | *Tu carrera* |
-| **Universidad** | *Tu universidad* |
-| **Año** | 2025 |
+| **Nombre** | *Jose Luis ALonso* |
+| **Grado** | *Doble Grado en Física y Matemáticas* |
+| **Universidad** | *Universidad Complutense de Madrid* |
+| **Año** | 2026 |
 
 ---
 
 ## 📄 Licencia
 
-Repositorio publicado con fines académicos como material complementario al TFG.  
+Repositorio publicado con fines académicos como material complementario a la memoria del TFG.  
 Queda prohibida su reproducción o uso comercial sin autorización expresa del autor.
